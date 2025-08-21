@@ -58,7 +58,7 @@ docker-compose up -d
 docker-compose ps
 ```
 
-## 物理机访问信息
+## 宿主机访问信息
 
 - **Web访问地址**: http://localhost:9980
 - **SSH端口**: 9922
@@ -161,7 +161,7 @@ exit
 编辑 `docker-compose.yml` 文件，修改 `external_url` 配置：
 
 ```yaml
-# 更改gitlab的默认访问地址，不改则是默认80端口（这里是容器内运行，所以不需要更改，会在下面映射物理机的9980到容器的80端口）
+# 更改gitlab的默认访问地址，不改则是默认80端口（这里是容器内运行，所以不需要更改，会在下面映射宿主机的9980到容器的80端口）
 GITLAB_OMNIBUS_CONFIG: |
   external_url 'http://your-domain.com:9980'
 ```
@@ -232,3 +232,53 @@ ssh -T git@localhost -p 9922
 ## 绑定远程仓库与本地仓库
 
 ![](./gitlab仓库的远程与本地绑定.png)
+
+
+# 额外提醒
+
+## 容器之间互相通信
+
+如果要容器之间互相通信，建议创建自定义网络，比如：
+
+```bash
+docker network create gitlab_network
+```
+
+并在docker-compose.yml中进行更改：
+
+```config
+services:
+  serviceA:
+    image: nginx
+    networks:
+      - gitlab_network
+
+networks:
+  gitlab_network:
+    external: true
+    name: gitlab_network
+```
+
+```config
+services:
+  serviceB:
+    image: nginx
+    networks:
+      - gitlab_network
+
+networks:
+  gitlab_network:
+    external: true
+    name: gitlab_network
+```
+
+容器 A 可以通过服务名称 serviceB 访问容器 B。例如，如果容器 B 是一个 Web 服务，容器 A 可以通过以下方式访问容器 B：
+```bash
+curl http://serviceB
+```
+
+## 配置webhook报错
+
+### Urlis blocked: Requests to the local network are not allowed
+
+进入 Admin area => Settings => Network ，然后点击 Outbound requests 右边 的“expand”按钮，勾选允许对本地的请求，并点击 Save changes按钮即可

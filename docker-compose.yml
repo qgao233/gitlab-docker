@@ -8,9 +8,9 @@ services:
     hostname: 'localhost'
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        # （可选）更改gitlab的默认访问地址，不改则是默认80端口（这里是容器内运行，所以不需要更改，会在下面映射物理机的9980到容器的80端口）
+        # （可选）更改gitlab的默认访问地址，不改则是默认80端口（这里是容器内运行，所以不需要更改，会在下面映射宿主机的9980到容器的80端口）
         # external_url 'http://localhost:9980'
-        # （可选）SSH端口配置，默认22（这里是容器内运行，所以不需要更改，会在下面映射物理机的9922到容器的22端口）
+        # （可选）SSH端口配置，默认22（这里是容器内运行，所以不需要更改，会在下面映射宿主机的9922到容器的22端口）
         # gitlab_rails['gitlab_shell_ssh_port'] = 9922
 
         # 时区设置
@@ -81,8 +81,13 @@ services:
     
     # 共享内存设置（提高性能）
     shm_size: '256m'
+    networks:
+      - gitlab_network
 
 # 创建网络（可选）
 networks:
-  default:
-    driver: bridge
+  gitlab_network:
+    external: true
+    name: gitlab_network
+  # default:
+  #   driver: bridge
