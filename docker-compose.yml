@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  gitlab:
+    image: 'docker.1ms.run/gitlab/gitlab-ce:18.2.4-ce.0'
+    container_name: gitlab
+    restart: always
+    hostname: 'localhost'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        # （可选）更改gitlab的默认访问地址，不改则是默认80端口（这里是容器内运行，所以不需要更改，会在下面映射物理机的9980到容器的80端口）
+        # external_url 'http://localhost:9980'
+        # （可选）SSH端口配置，默认22（这里是容器内运行，所以不需要更改，会在下面映射物理机的9922到容器的22端口）
+        # gitlab_rails['gitlab_shell_ssh_port'] = 9922
+
+        # 时区设置
+        gitlab_rails['time_zone'] = 'Asia/Shanghai'
+        
+        
+        
+        # 内存配置优化
+        # PostgreSQL设置
+        postgresql['shared_buffers'] = "256MB"
+        postgresql['max_connections'] = 200
+        
+        # Unicorn worker进程数
+        unicorn['worker_processes'] = 2
+        
+        # Sidekiq并发数
+        sidekiq['concurrency'] = 15
+        
+        # 禁用一些不必要的服务以节省内存
+        prometheus_monitoring['enable'] = false
+        alertmanager['enable'] = false
+        node_exporter['enable'] = false
+        redis_exporter['enable'] = false
+        postgres_exporter['enable'] = false
+        gitlab_exporter['enable'] = false
+        
+        # 邮件配置（可选）
+        # gitlab_rails['smtp_enable'] = true
+        # gitlab_rails['smtp_address'] = "smtp.gmail.com"
+        # gitlab_rails['smtp_port'] = 587
+        # gitlab_rails['smtp_user_name'] = "your-email@gmail.com"
+        # gitlab_rails['smtp_password'] = "your-password"
+        # gitlab_rails['smtp_domain'] = "smtp.gmail.com"
+        # gitlab_rails['smtp_authentication'] = "login"
+        # gitlab_rails['smtp_enable_starttls_auto'] = true
+        
+    ports:
+      # HTTP端口映射到9980
+      - '9980:80'
+      # SSH端口映射到9922
+      - '9922:22'
+      # HTTPS端口（可选）
+      - '9443:443'
+    
+    volumes:
+      # 配置文件挂载
+      - './gitlab/config:/etc/gitlab'
+      # 日志文件挂载
+      - './gitlab/logs:/var/log/gitlab'
+      # 数据文件挂载
+      - './gitlab/data:/var/opt/gitlab'
+      
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    
+    # 共享内存设置（提高性能）
+    shm_size: '256m'
+
+# 创建网络（可选）
+networks:
+  default:
+    driver: bridge
