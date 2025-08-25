@@ -35,7 +35,11 @@ echo.
 :: 检查GitLab容器状态
 echo [信息] 检查GitLab容器状态...
 docker ps --filter "name=gitlab" --quiet >nul 2>&1
-if %errorlevel% neq 0 (
+if "%errorlevel%"=="0" (
+    echo [信息] 发现运行中的GitLab容器
+    docker ps --filter "name=gitlab"
+    goto :after_check
+) else (
     echo [警告] 未发现运行中的GitLab容器
     echo.
     docker ps -a --filter "name=gitlab" --quiet >nul 2>&1
@@ -53,10 +57,8 @@ if %errorlevel% neq 0 (
         pause
         exit /b 0
     )
-) else (
-    echo [信息] 发现运行中的GitLab容器
-    docker ps --filter "name=gitlab"
 )
+:after_check
 echo.
 
 :: 确认停止操作
