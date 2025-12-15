@@ -152,6 +152,8 @@ user.save!
 exit
 ```
 
+> 密码强度要求：字母+数字（不能是弱密码），不低于8位
+
 ### 国际化切换
 
 登录进去后，可以从preference中找到语言进行更改，之后刷新。
@@ -282,3 +284,19 @@ curl http://serviceB
 ### Urlis blocked: Requests to the local network are not allowed
 
 进入 Admin area => Settings => Network ，然后点击 Outbound requests 右边 的“expand”按钮，勾选允许对本地的请求，并点击 Save changes按钮即可
+
+## 检查 GitLab 各组件运行状态的命令
+
+```
+# gitlab-ctl status
+run: gitaly: (pid 306) 266s; run: log: (pid 302) 266s
+run: gitlab-kas: (pid 309) 266s; run: log: (pid 394) 265s
+run: gitlab-workhorse: (pid 608) 240s; run: log: (pid 517) 245s
+run: logrotate: (pid 307) 266s; run: log: (pid 300) 266s
+run: nginx: (pid 526) 242s; run: log: (pid 625) 239s
+run: postgresql: (pid 310) 266s; run: log: (pid 303) 266s
+run: puma: (pid 646) 237s; run: log: (pid 412) 259s
+run: redis: (pid 305) 266s; run: log: (pid 301) 266s
+run: sidekiq: (pid 663) 232s; run: log: (pid 434) 253s
+run: sshd: (pid 33) 277s; run: log: (pid 32) 277s
+```
