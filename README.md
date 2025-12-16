@@ -300,3 +300,17 @@ run: redis: (pid 305) 266s; run: log: (pid 301) 266s
 run: sidekiq: (pid 663) 232s; run: log: (pid 434) 253s
 run: sshd: (pid 33) 277s; run: log: (pid 32) 277s
 ```
+
+## 问题总结
+
+- push时报错：
+```
+[info] fatal: detected dubious ownership in repository at '/var/opt/gitlab/git-data/repositories/@hashed/d4/73/d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35.git'
+```
+原因在于'/var/opt/gitlab/git-data/repositories/@hashed/d4/73/d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35.git'在容器中的所有者为root（不知道为啥变成了root，之前都是git），而gitlab调用git操作时，是使用的git用户，这就触发了Git 2.36之后的操作者和所有者不一致的情况，添加到安全目录的方法不起作用（无论system/global），只有改掉该指向的文件的所有者为git：
+```
+chown -R git:git /var/opt/gitlab/git-data/repositories/@hashed/d4/73/d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35.git
+```
+
+- 仓库一定要设置user.name和user.email和gitlab中的一致
+- 仓库的用户要给`维护者`的角色
