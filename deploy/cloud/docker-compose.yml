@@ -1,0 +1,122 @@
+version: '3.8'
+
+# ============================================================
+# GitLab 本地部署配置（GitLab 15.11.13）
+# ============================================================
+# 支持两种模式（通过 .env 文件中的 DEPLOY_MODE 切换）：
+#   - integrated: 集成模式（内置 PostgreSQL + 内置 Redis）
+#   - external:   外部模式（外部 PostgreSQL + 内置 Redis）
+#
+# 【配置方式】
+#   1. 复制 .env.example 为 .env
+#   2. 修改 DEPLOY_MODE 和数据库配置
+#   3. 运行 docker-compose up -d
+#
+# 【注意】切换模式后数据不互通，建议先备份再切换
+# 【版本要求】分离模式需要 PostgreSQL >= 12，Redis >= 6.0
+# ============================================================
+
+x-common-config: &common-config
+  restart: always
+  networks:
+    - gitlab_network
+
+services:
+  gitlab:
+    image: 'docker.1ms.run/gitlab/gitlab-ce:15.11.13-ce.0'
+    container_name: gitlab
+    <<: *common-config
+    hostname: 'localhost'
+    environment:
+      # 从 .env 读取配置
+      DEPLOY_MODE: '${DEPLOY_MODE:-integrated}'
+      DB_HOST: '${DB_HOST:-}'
+      DB_PORT: '${DB_PORT:-5432}'
+      DB_NAME: '${DB_NAME:-gitlabhq_production}'
+      DB_USER: '${DB_USER:-gitlab}'
+      DB_PASSWORD: '${DB_PASSWORD:-}'
+      GITLAB_OMNIBUS_CONFIG: |
+        # ============ 访问地址配置 ============
+        # external_url 不带端口，容器内 Nginx 监听 80，通过端口映射暴露到 9980
+        external_url 'http://localhost'
+        
+        # 告诉 GitLab 实际的外部端口（用于生成正确的 URL）
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        gitlab_rails['gitlab_port'] = 9980
+        
+        # SSH 端口配置（让 clone 地址显示正确的端口）
+        gitlab_rails['gitlab_shell_ssh_port'] = 9922
+        
+        # 时区设置
+        gitlab_rails['time_zone'] = 'Asia/Shanghai'
+        
+        # ============ 数据库配置（根据 DEPLOY_MODE 自动切换） ============
+        if ENV['DEPLOY_MODE'] == 'external'
+          # 外部模式：使用外部 PostgreSQL + 内置 Redis
+          postgresql['enable'] = false
+          gitlab_rails['db_adapter'] = 'postgresql'
+          gitlab_rails['db_encoding'] = 'unicode'
+          gitlab_rails['db_host'] = ENV['DB_HOST']
+          gitlab_rails['db_port'] = ENV['DB_PORT'].to_i
+          gitlab_rails['db_database'] = ENV['DB_NAME']
+          gitlab_rails['db_username'] = ENV['DB_USER']
+          gitlab_rails['db_password'] = ENV['DB_PASSWORD']
+        else
+          # 集成模式：使用内置 PostgreSQL + 内置 Redis
+          postgresql['shared_buffers'] = "256MB"
+          postgresql['max_connections'] = 200
+        end
+        
+        # ============ 性能优化 ============
+        puma['worker_processes'] = 2
+        puma['min_threads'] = 1
+        puma['max_threads'] = 4
+        sidekiq['concurrency'] = 15
+        
+        # ============ 禁用不需要的组件（节省内存） ============
+        prometheus_monitoring['enable'] = false
+        alertmanager['enable'] = false
+        node_exporter['enable'] = false
+        redis_exporter['enable'] = false
+        postgres_exporter['enable'] = false
+        gitlab_exporter['enable'] = false
+        grafana['enable'] = false
+
+        # ============ SSH 配置 ============
+        gitlab_rails['gitlab_shell_ssh_port'] = 22
+        
+        # ============ HTTPS 配置（可选） ============
+        # 使用 Let's Encrypt 自动获取证书
+        # letsencrypt['enable'] = true
+        # letsencrypt['contact_emails'] = [ENV['ADMIN_EMAIL']]
+        
+    ports:
+      - '9980:80'
+      - '9922:22'
+      - '9443:443'
+    
+    volumes:
+      - './gitlab/config:/etc/gitlab'
+      - './gitlab/logs:/var/log/gitlab'
+      - './gitlab/data:/var/opt/gitlab'
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    
+    shm_size: '256m'
+
+networks:
+  gitlab_network:
+    driver: bridge

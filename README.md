@@ -1,76 +1,112 @@
 # GitLab Docker 部署
 
-通过Docker Compose快速部署GitLab社区版的完整解决方案。
+通过 Docker Compose 快速部署 GitLab 社区版的完整解决方案。
 
-## 文件说明
+## 部署方案选择
 
-- `docker-compose.yml` - Docker Compose配置文件
-- `start_gitlab.cmd` - Windows启动脚本
-- `start_gitlab.sh` - Linux/Mac启动脚本
-- `stop_gitlab.cmd` - Windows停止脚本
-- `stop_gitlab.sh` - Linux/Mac停止脚本
-- `sketch.md` - 部署参考文档
+本仓库提供两种部署方案，位于 `deploy/` 目录下：
+
+| 方案 | 目录 | 适用场景 | 特点 |
+|------|------|----------|------|
+| **本地部署** | `deploy/local/` | 个人学习、内网协作 | 支持集成/分离两种模式 |
+| **云部署** | `deploy/cloud/` | 团队协作、生产环境 | 外置云数据库，高可用 |
+
+### 目录结构
+
+```
+gitlab-docker/
+├── deploy/
+│   ├── local/                        # 本地部署
+│   │   ├── docker-compose.yml        # 集成模式配置
+│   │   ├── docker-compose.separated.yml  # 分离模式配置
+│   │   ├── start.ps1 / start.sh      # 启动脚本
+│   │   ├── stop.ps1 / stop.sh        # 停止脚本
+│   │   └── README.md
+│   │
+│   └── cloud/                        # 云部署
+│       ├── docker-compose.yml        # 云数据库配置
+│       ├── .env.example              # 环境变量模板
+│       ├── install.sh                # ECS 环境安装
+│       ├── start.sh / stop.sh        # 启停脚本
+│       ├── backup.sh / restore.sh    # OSS 备份恢复
+│       ├── init-database.sql         # RDS 初始化 SQL
+│       └── README.md
+│
+├── GitLab-CICD原理.md               # CI/CD 工作流程详解
+├── gitlab仓库的远程与本地绑定.png    # SSH 配置示意图
+└── README.md                        # 本文档
+```
+
+### 本地部署模式
+
+本地部署支持两种模式，可随时切换：
+
+| 模式 | 配置文件 | 说明 |
+|------|----------|------|
+| **集成模式** | `docker-compose.yml` | 内置 PostgreSQL/Redis，开箱即用 |
+| **分离模式** | `docker-compose.separated.yml` | 独立数据库容器，便于管理 |
+
+---
 
 ## 快速开始
 
-### Windows系统
-
-**启动GitLab:**
-1. 确保Docker Desktop已安装并运行
-2. 双击运行 `start_gitlab.cmd` 或在命令提示符中执行：
-   ```cmd
-   start_gitlab.cmd
-   ```
-
-**停止GitLab:**
-```cmd
-stop_gitlab.cmd
-```
-
-### Linux/Mac系统
-
-**启动GitLab:**
-1. 确保Docker和Docker Compose已安装
-2. 给脚本添加执行权限并运行：
-   ```bash
-   chmod +x start_gitlab.sh
-   ./start_gitlab.sh
-   ```
-
-**停止GitLab:**
-```bash
-chmod +x stop_gitlab.sh
-./stop_gitlab.sh
-```
-
-### 手动部署
-
-如果不想使用脚本，也可以手动执行：
+### 本地部署（推荐新手）
 
 ```bash
-# 创建数据目录
-mkdir -p gitlab/{config,logs,data}
+cd deploy/local
 
-# 启动服务
-docker-compose up -d
+# Windows (PowerShell)
+.\start.ps1
 
-# 查看状态
-docker-compose ps
+# Linux/macOS
+chmod +x start.sh && ./start.sh
 ```
 
-## 宿主机访问信息
+启动脚本会提示选择部署模式（集成/分离）。
 
-- **Web访问地址**: http://localhost:9980
-- **SSH端口**: 9922
-- **初始用户名**: root
-- **初始密码获取**:
-  ```bash
-  # Linux/Mac
-  docker exec gitlab cat /etc/gitlab/initial_root_password
-  
-  # Windows
-  docker exec gitlab type /etc/gitlab/initial_root_password
-  ```
+### 云部署
+
+```bash
+# 上传到 ECS
+scp -r deploy/cloud/* root@your-ecs:/opt/gitlab/
+
+# SSH 登录后
+cd /opt/gitlab
+./install.sh  # 安装环境
+vi .env       # 修改配置
+./start.sh    # 启动服务
+```
+
+详细说明请查看各目录下的 README.md。
+
+---
+
+## 访问信息
+
+| 项目 | 本地部署 | 云部署 |
+|------|----------|--------|
+| Web 地址 | http://localhost:9980 | http://your-domain |
+| SSH 端口 | 9922 | 22 |
+| 用户名 | root | root |
+
+### 获取初始密码
+
+```bash
+docker exec gitlab cat /etc/gitlab/initial_root_password
+```
+
+---
+
+## 系统要求
+
+| 配置项 | 最小要求 | 推荐配置 |
+|--------|----------|----------|
+| 内存 | 4GB | 8GB+ |
+| CPU | 2核 | 4核+ |
+| 存储 | 10GB | 50GB+ |
+| 系统 | Windows 10+/Linux/macOS | - |
+
+---
 
 ## 常用命令
 
@@ -81,159 +117,117 @@ docker-compose ps
 # 查看日志
 docker-compose logs -f gitlab
 
-# 停止服务
-docker-compose down
-
 # 重启服务
 docker-compose restart
 
-# 进入容器
-docker exec -it gitlab /bin/bash
+# 创建备份
+docker exec gitlab gitlab-backup create
 
-# 更新GitLab
-docker-compose pull
-docker-compose up -d
-```
-
-## 配置说明
-
-### 端口映射
-
-- `9980:80` - HTTP访问端口
-- `9922:22` - SSH Git克隆端口
-- `9443:443` - HTTPS端口（可选）
-
-### 数据持久化
-
-所有GitLab数据存储在 `./gitlab/` 目录下：
-
-- `gitlab/config/` - 配置文件
-- `gitlab/logs/` - 日志文件
-- `gitlab/data/` - 数据文件
-
-### 性能优化
-
-配置文件已包含以下优化：
-
-- 禁用了监控组件以节省内存
-- 优化了数据库连接数
-- 设置了合适的worker进程数
-- 限制了内存使用
-
-## 系统要求
-
-- **最小内存**: 4GB RAM
-- **推荐内存**: 8GB+ RAM
-- **存储空间**: 至少10GB可用空间
-- **操作系统**: Windows 10+, Linux, macOS
-
-## 故障排除
-
-### GitLab无法启动
-
-1. 检查内存是否足够（至少4GB）
-2. 确保端口9980和9922未被占用
-3. 查看详细日志：`docker-compose logs gitlab`
-
-### 忘记root密码
-
-```bash
 # 进入容器
 docker exec -it gitlab bash
 
-# 进入Rails控制台
+# 检查组件状态
+docker exec gitlab gitlab-ctl status
+```
+
+---
+
+## 仓库连接配置
+
+### SSH 密钥配置
+
+生成 SSH 密钥（避免覆盖已有密钥）：
+
+```bash
+ssh-keygen -t rsa -C "your-email@example.com" -f ~/.ssh/id_rsa_gitlab
+```
+
+配置 `~/.ssh/config`：
+
+```
+Host localhost
+    User git
+    Port 9922
+    IdentityFile ~/.ssh/id_rsa_gitlab
+```
+
+测试连接：
+
+```bash
+ssh -T git@localhost -p 9922
+```
+
+### 绑定远程仓库
+
+![](./gitlab仓库的远程与本地绑定.png)
+
+---
+
+## 故障排除
+
+### GitLab 无法启动
+
+1. 检查内存是否足够（至少 4GB）
+2. 确保端口未被占用
+3. 查看日志：`docker-compose logs gitlab`
+
+### 忘记 root 密码
+
+```bash
+docker exec -it gitlab bash
 gitlab-rails console -e production
 
-# 重置密码
-user = User.where(id: 1).first
+# 在控制台中执行
+user = User.find_by(username: 'root')
 user.password = '新密码'
 user.password_confirmation = '新密码'
 user.save!
 exit
 ```
 
-> 密码强度要求：字母+数字（不能是弱密码），不低于8位
+> 密码要求：字母+数字，不低于 8 位
 
-### 国际化切换
+### push 时报错 dubious ownership
 
-登录进去后，可以从preference中找到语言进行更改，之后刷新。
+```bash
+docker exec gitlab chown -R git:git /var/opt/gitlab/git-data/repositories/
+```
 
-### 修改访问地址（可选）
+### Webhook 报错 local network not allowed
 
-编辑 `docker-compose.yml` 文件，修改 `external_url` 配置：
+进入 Admin area → Settings → Network → Outbound requests，勾选允许对本地的请求。
+
+---
+
+## 容器间通信
+
+如需容器间通信，创建自定义网络：
+
+```bash
+docker network create gitlab_network
+```
+
+在 `docker-compose.yml` 中配置：
 
 ```yaml
-# 更改gitlab的默认访问地址，不改则是默认80端口（这里是容器内运行，所以不需要更改，会在下面映射宿主机的9980到容器的80端口）
-GITLAB_OMNIBUS_CONFIG: |
-  external_url 'http://your-domain.com:9980'
+services:
+  your-service:
+    networks:
+      - gitlab_network
+
+networks:
+  gitlab_network:
+    external: true
+    name: gitlab_network
 ```
 
-然后重新启动服务：
+---
 
-```bash
-docker-compose down
-docker-compose up -d
-```
+## 其他注意事项
 
-## 安全建议
-
-1. 首次登录后立即修改root密码
-2. 创建普通用户账号，避免使用root进行日常操作
-3. 定期备份 `gitlab/` 目录
-4. 如果在生产环境使用，建议配置HTTPS
-5. 考虑使用反向代理（如Nginx）
-
-## 备份与恢复
-
-### 备份
-
-```bash
-# 创建备份
-docker exec -t gitlab gitlab-backup create
-
-# 备份位置
-# 备份文件位于: gitlab/data/backups/
-```
-
-### 恢复
-
-```bash
-# 停止服务
-docker-compose down
-
-# 将备份文件放到 gitlab/data/backups/ 目录
-
-# 启动服务
-docker-compose up -d
-
-# 恢复数据
-docker exec -it gitlab gitlab-backup restore BACKUP=备份文件名
-```
-
-
-# 仓库连接
-
-## 连接前的操作
-
-任意目录生成ssh证书(取名`id_rsa_gitlab`，避免覆盖其他已生成密钥)
-```bash
-ssh-keygen -t rsa -C "邮箱"
-```
-把生成的密钥对放入`~/.ssh/`目录后，再更改`~/.ssh/`目录的`config`文件：
-```config
-Host localhost
-    User git
-    Port 9922
-    IdentityFile ~/.ssh/id_rsa_gitlab
-```
-测试：
-```bash
-ssh -T git@localhost -p 9922
-```
-
-## 绑定远程仓库与本地仓库
-
-![](./gitlab仓库的远程与本地绑定.png)
+- 仓库需设置 `user.name` 和 `user.email` 与 GitLab 账号一致
+- 仓库用户需要有 **维护者** 角色才能 push
+- 语言切换：登录后在 Preference 中修改
 
 
 # 额外提醒
