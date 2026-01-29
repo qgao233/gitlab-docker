@@ -37,8 +37,8 @@ services:
       DB_PASSWORD: '${DB_PASSWORD:-}'
       GITLAB_OMNIBUS_CONFIG: |
         # ============ 访问地址配置 ============
-        # external_url 不带端口，容器内 Nginx 监听 80，通过端口映射暴露到 9980
-        external_url 'http://localhost'
+        # external_url 外部访问地址 9980端口
+        external_url 'http://localhost:9980'
         
         # 告诉 GitLab 实际的外部端口（用于生成正确的 URL）
         nginx['listen_port'] = 80

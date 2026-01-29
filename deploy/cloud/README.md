@@ -97,7 +97,7 @@ chmod +x *.sh
 ./install.sh
 
 # 配置 ossutil（替换为你的 AccessKey）
-ossutil config -e oss-cn-hangzhou.aliyuncs.com -i YOUR_ACCESS_KEY_ID -k YOUR_ACCESS_KEY_SECRET
+ossutil config -e oss-cn-shanghai-internal.aliyuncs.com -i YOUR_ACCESS_KEY_ID -k YOUR_ACCESS_KEY_SECRET
 ```
 
 ### 第三步：修改配置
