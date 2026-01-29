@@ -72,10 +72,14 @@ DB_HOST=hq-mii-db.pg.rds.aliyuncs.com
 DB_PORT=5432
 DB_NAME=github-yfpo
 DB_USER=github_user
-DB_PASSWORD=your_password
+DB_PASSWORD="your_password"
+
+# OSS 备份配置（可选）
+OSSUTIL_PATH="D:\ossutil-2.2.0-windows-amd64\ossutil.exe"
+OSS_BUCKET=oss://your-bucket-name/gitlab-backups
 ```
 
-> 集成模式下数据库配置会被忽略。
+> 集成模式下数据库配置会被忽略。密码包含特殊字符时需用双引号包裹。
 
 ## 访问信息
 
@@ -88,7 +92,7 @@ DB_PASSWORD=your_password
 ### 设置 root 密码
 
 ```powershell
-.\reset-password_root.ps1
+.\reset-password.ps1
 ```
 
 ## 目录结构
@@ -100,7 +104,9 @@ deploy/local/
 ├── .env.example                 # 环境变量模板
 ├── start.ps1 / start.sh         # 启动脚本
 ├── stop.ps1 / stop.sh           # 停止脚本
-├── reset-password_root.ps1           # 重置 root 密码
+├── backup.ps1                   # 备份脚本（支持 OSS 上传）
+├── restore.ps1                  # 恢复脚本（支持 OSS 下载）
+├── reset-password.ps1           # 重置 root 密码
 ├── reset-database.ps1           # 重置数据库
 ├── README.md                    # 本文档
 └── gitlab/                      # GitLab 数据（启动后创建）
@@ -121,12 +127,82 @@ docker-compose logs -f gitlab
 # 重启服务
 docker-compose restart
 
-# 创建备份
-docker exec gitlab gitlab-backup create
-
 # 进入容器
 docker exec -it gitlab bash
 ```
+
+## 备份与恢复
+
+### 备份
+
+```powershell
+.\backup.ps1
+```
+
+功能：
+- 创建 GitLab 数据备份
+- 本地备份配置文件到 `config-backup/`
+- **可选**：自动上传到阿里云 OSS（需在 `.env` 配置）
+
+### 恢复
+
+```powershell
+# 从本地备份恢复
+.\restore.ps1 <备份文件名>
+
+# 从 OSS 下载并恢复
+.\restore.ps1 -FromOss <备份文件名>
+
+# 列出 OSS 上的备份
+.\restore.ps1 -ListOss
+```
+
+示例：
+```powershell
+.\restore.ps1 1769650886_2026_01_29_15.11.13_gitlab_backup.tar
+```
+
+### OSS 配置（可选）
+
+如需将备份上传到阿里云 OSS，需要安装和配置 ossutil。
+
+#### 1. 下载 ossutil-2
+
+下载地址：https://gosspublic.alicdn.com/ossutil/v2/2.2.0/ossutil-2.2.0-windows-amd64.zip?spm=a2c63.p38356.0.0.5401c0eaxffczu&file=ossutil-2.2.0-windows-amd64.zip
+
+下载后解压到任意目录，如 `D:\ossutil-2.2.0-windows-amd64\`
+
+#### 2. 配置 ossutil
+
+创建配置文件 `C:\Users\<用户名>\.ossutilconfig`：
+
+```ini
+[Credentials]
+language = CH
+endpoint = oss-cn-shanghai.aliyuncs.com
+accessKeyID = <你的 AccessKey ID>
+accessKeySecret = <你的 AccessKey Secret>
+region = cn-shanghai
+```
+
+> 注意：本地使用**公网地址** `oss-cn-shanghai.aliyuncs.com`，ECS 内网使用 `oss-cn-shanghai-internal.aliyuncs.com`
+
+#### 3. 验证配置
+
+```powershell
+D:\ossutil-2.2.0-windows-amd64\ossutil.exe ls
+```
+
+应该能看到你的 bucket 列表。
+
+#### 4. 配置 .env
+
+在 `.env` 中添加：
+```bash
+OSSUTIL_PATH="D:\ossutil-2.2.0-windows-amd64\ossutil.exe"
+OSS_BUCKET=oss://gitlab-oss/gitlab-backups
+```
+
 
 ## 故障排除
 
@@ -139,7 +215,7 @@ docker exec -it gitlab bash
 ### 重置 root 密码
 
 ```powershell
-.\reset-password_root.ps1
+.\reset-password.ps1
 ```
 
 ### 重置数据库（清空重来）
