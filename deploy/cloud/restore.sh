@@ -2,13 +2,20 @@
 set -e
 
 # 加载环境变量
-if [ -f ".env" ]; then
-    source .env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    . "$SCRIPT_DIR/.env"
+    set +a
+else
+    echo "[错误] 未找到 .env 文件"
+    echo "请先执行: cp .env.example .env"
+    exit 1
 fi
 
 # ============ 配置 ============
 OSS_BUCKET="${OSS_BUCKET:-oss://your-bucket-name/gitlab-backups}"
-GITLAB_DIR="$(pwd)"
+GITLAB_DIR="$SCRIPT_DIR"
 
 echo "========================================"
 echo "  GitLab 数据恢复脚本"
@@ -28,7 +35,9 @@ if [ -z "$1" ]; then
 fi
 
 BACKUP_FILE=$1
-BACKUP_NAME=${BACKUP_FILE%.tar}  # 移除 .tar 后缀
+# 从文件名提取备份 ID（移除 _gitlab_backup.tar 后缀）
+# 例如：1769650886_2026_01_29_15.11.13_gitlab_backup.tar -> 1769650886_2026_01_29_15.11.13
+BACKUP_NAME=${BACKUP_FILE%_gitlab_backup.tar}
 
 echo "[1/6] 从 OSS 下载配置文件..."
 mkdir -p ${GITLAB_DIR}/gitlab/config

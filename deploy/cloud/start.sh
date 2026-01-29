@@ -141,6 +141,9 @@ echo
 echo "  查看启动日志："
 echo "  docker-compose logs -f gitlab"
 echo
+echo "  查看启动服务："
+echo "  docker exec gitlab gitlab-ctl status"
+echo
 echo "  设置 root 密码："
 echo "  ./reset-password_root.sh"
 echo

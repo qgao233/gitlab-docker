@@ -2,13 +2,20 @@
 set -e
 
 # 加载环境变量
-if [ -f ".env" ]; then
-    source .env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    . "$SCRIPT_DIR/.env"
+    set +a
+else
+    echo "[错误] 未找到 .env 文件"
+    echo "请先执行: cp .env.example .env"
+    exit 1
 fi
 
 # ============ 配置 ============
 OSS_BUCKET="${OSS_BUCKET:-oss://your-bucket-name/gitlab-backups}"
-GITLAB_DIR="$(pwd)"
+GITLAB_DIR="$SCRIPT_DIR"
 LOG_FILE="/var/log/gitlab-backup.log"
 
 # ============ 日志函数 ============
