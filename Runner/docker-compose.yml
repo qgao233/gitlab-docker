@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  gitlab-runner:
+    image: 'docker.1ms.run/gitlab/gitlab-runner:v15.11.1'
+    container_name: gitlab-runner
+    restart: always
+    volumes:
+      # Runner 配置
+      - './config:/etc/gitlab-runner'
+      # Docker socket（用于 docker executor）
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    environment:
+      - TZ=Asia/Shanghai
+    # 添加 hosts 映射
+    extra_hosts:
+      - "gitlab.yfpo.com:10.252.4.135"
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    # 如果需要与 GitLab 在同一网络，取消下面注释
+    # networks:
+    #   - gitlab_network
+
+# 外部网络配置（需要先创建：docker network create gitlab_network）
+# networks:
+#   gitlab_network:
+#     external: true
+#     name: gitlab_network
