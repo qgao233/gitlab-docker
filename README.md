@@ -308,3 +308,13 @@ chown -R git:git /var/opt/gitlab/git-data/repositories/@hashed/d4/73/d4735e3a265
 
 - 仓库一定要设置user.name和user.email和gitlab中的一致
 - 仓库的用户要给`维护者`的角色
+
+### 磁盘暴满
+
+# 清空 GitLab 容器日志（推荐 truncate，不删文件）
+truncate -s 0 $(docker inspect --format='{{.LogPath}}' gitlab)
+# 若有 gitlab-runner 容器
+truncate -s 0 $(docker inspect --format='{{.LogPath}}' gitlab-runner 2>/dev/null) 2>/dev/null
+
+docker system prune -a -f
+docker builder prune -a -f
