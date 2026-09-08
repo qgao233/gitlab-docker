@@ -36,7 +36,7 @@ $DockerImage = [Environment]::GetEnvironmentVariable("DOCKER_IMAGE", "Process")
 
 # 设置默认值
 if (-not $RunnerName) { $RunnerName = "docker-runner" }
-if (-not $RunnerTags) { $RunnerTags = "docker,linux" }
+if (-not $RunnerTags) { $RunnerTags = "docker,linux-x64" }
 if (-not $RunnerExecutor) { $RunnerExecutor = "docker" }
 if (-not $DockerImage) { $DockerImage = "docker.1ms.run/library/alpine:latest" }
 

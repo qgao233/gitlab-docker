@@ -13,7 +13,7 @@ shutdown_timeout = 0
   token_obtained_at = 2026-01-29T07:42:40Z
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "docker"
-  tags = ["docker", "linux"]
+  tags = ["docker", "linux-x64"]
   run_untagged = true
   [runners.cache]
     MaxUploadedArchiveSize = 0
@@ -26,4 +26,6 @@ shutdown_timeout = 0
     disable_cache = false
     volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
     shm_size = 0
+    memory = "4g"
+    memory_swap = "4g"
     extra_hosts = ["gitlab.yfpo.com:10.252.4.135"]

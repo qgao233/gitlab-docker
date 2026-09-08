@@ -15,13 +15,9 @@ services:
     # 添加 hosts 映射
     extra_hosts:
       - "gitlab.yfpo.com:10.252.4.135"
-    # 资源限制
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 256M
+    # Runner 进程本身很轻，1–2G 足够；deploy.resources 在非 Swarm 下常不生效，用 mem_limit
+    mem_limit: 2g
+    mem_reservation: 512m
     # 如果需要与 GitLab 在同一网络，取消下面注释
     # networks:
     #   - gitlab_network

@@ -47,7 +47,7 @@ REGISTRATION_TOKEN=your_token_here
 
 # Runner 配置
 RUNNER_NAME=docker-runner
-RUNNER_TAGS=docker,linux
+RUNNER_TAGS=docker,linux-x64
 RUNNER_EXECUTOR=docker
 DOCKER_IMAGE=docker.1ms.run/library/alpine:latest
 ```
@@ -129,6 +129,30 @@ check_interval = 0                # 检查间隔
     privileged = true             # 允许特权模式（docker-in-docker）
     volumes = ["/var/run/docker.sock:/var/run/docker.sock"]
     pull_policy = "if-not-present"
+    memory = "4g"                 # 单个 CI job 容器内存上限
+    memory_swap = "4g"
+```
+
+### 内存配置（两层）
+
+| 层级 | 配置位置 | 建议值 | 说明 |
+|------|----------|--------|------|
+| Docker Desktop 总内存 | Docker Desktop → Settings → Resources | **8GB+** | job 容器共用此配额，build 紧张时务必调高 |
+| Runner 容器 | `docker-compose.yml` → `mem_limit` | **2GB** | 只跑 Runner 进程，1–2G 够用 |
+| 单个 CI job | `config.toml` → `[runners.docker]` → `memory` | **4GB** | `pnpm build` 等吃内存的是这层 |
+
+改 `docker-compose.yml` 后需重建容器：
+
+```powershell
+docker-compose down
+docker-compose up -d
+docker inspect gitlab-runner --format '{{.HostConfig.Memory}}'   # 2147483648 = 2GB
+```
+
+改 `config.toml` 后重启即可：
+
+```powershell
+docker-compose restart
 ```
 
 ### 增加并发数

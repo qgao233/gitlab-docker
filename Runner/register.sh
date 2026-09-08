@@ -27,7 +27,7 @@ fi
 
 # 设置默认值
 RUNNER_NAME="${RUNNER_NAME:-docker-runner}"
-RUNNER_TAGS="${RUNNER_TAGS:-docker,linux}"
+RUNNER_TAGS="${RUNNER_TAGS:-docker,linux-x64}"
 RUNNER_EXECUTOR="${RUNNER_EXECUTOR:-docker}"
 DOCKER_IMAGE="${DOCKER_IMAGE:-docker.1ms.run/library/alpine:latest}"
 
