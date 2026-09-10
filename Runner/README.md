@@ -129,17 +129,18 @@ check_interval = 0                # 检查间隔
     privileged = true             # 允许特权模式（docker-in-docker）
     volumes = ["/var/run/docker.sock:/var/run/docker.sock"]
     pull_policy = "if-not-present"
-    memory = "4g"                 # 单个 CI job 容器内存上限
-    memory_swap = "4g"
+    memory = "8g"                 # 单个 CI job 容器内存上限（tsc + Node 4096 堆需 ≥8GB）
+    memory_swap = "10g"
+    shm_size = 268435456          # 256MB
 ```
 
 ### 内存配置（两层）
 
 | 层级 | 配置位置 | 建议值 | 说明 |
 |------|----------|--------|------|
-| Docker Desktop 总内存 | Docker Desktop → Settings → Resources | **8GB+** | job 容器共用此配额，build 紧张时务必调高 |
+| Docker Desktop 总内存 | Docker Desktop → Settings → Resources | **12GB+** | job 容器共用此配额；含 `--max-old-space-size=4096` 的 build 建议 ≥12GB |
 | Runner 容器 | `docker-compose.yml` → `mem_limit` | **2GB** | 只跑 Runner 进程，1–2G 够用 |
-| 单个 CI job | `config.toml` → `[runners.docker]` → `memory` | **4GB** | `pnpm build` 等吃内存的是这层 |
+| 单个 CI job | `config.toml` → `[runners.docker]` → `memory` | **8GB** | Node 4GB 堆 + tsc/tsdown 开销，4GB 容器必 OOM（exit 137） |
 
 改 `docker-compose.yml` 后需重建容器：
 
